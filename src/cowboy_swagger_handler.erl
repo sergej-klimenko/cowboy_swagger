@@ -7,8 +7,17 @@
 -behaviour(trails_handler).
 -export([trails/0, trails/1]).
 
+%% Cowboy handler
+-export([init/3, handle/2, terminate/3]).
+
 -type route_match() :: '_' | iodata().
 -type options() :: #{server => ranch:ref(), host => route_match()}.
+
+-define(APP_ENV(X, Y), application:get_env(cowboy_swagger, X, Y)).
+-define(JSON_URL, "http://petstore.swagger.io/v2/swagger.json").
+-define(CLIENT_ID, "your-client-id").
+-define(CLIENT_SECRET, "your-client-secret-if-required").
+-define(UI_THEME, "newspaper").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Trails
@@ -29,8 +38,8 @@ trails(Options) ->
     end,
   Redirect = trails:trail(
     "/api-docs",
-    cowboy_swagger_redirect_handler,
-    {file, StaticFiles ++ "/index.html"},
+    ?MODULE,
+    [],
     #{get => #{hidden => true}}),
   Static = trails:trail(
     "/api-docs/[...]",
@@ -53,3 +62,28 @@ cowboy_swagger_priv() ->
       end;
     Path -> Path
   end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Cowboy handler
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+init(_, Req, _Opts) ->
+    {ok, Req, #{}}.
+
+handle(Req, State) ->
+    {Method, _} = cowboy_req:method(Req),
+    {ok, Reply} = handle_req(Method, Req),
+    {ok, Reply, State}.
+
+handle_req(<<"GET">>, Req) ->
+    Data = [
+            {json_url, ?APP_ENV(json_url, ?JSON_URL)},
+            {client_id, ?APP_ENV(client_id, ?CLIENT_ID)},
+            {client_secret, ?APP_ENV(client_secret, ?CLIENT_SECRET)},
+            {ui_theme, ?APP_ENV(ui_theme, ?UI_THEME)}
+           ],
+    {ok, Body2} = index_dtl:render(Data),
+    cowboy_req:reply(200, [{<<"content-type">>, <<"text/html">>}], Body2, Req).
+
+terminate(_Reason, _Req, _State) ->
+    ok.

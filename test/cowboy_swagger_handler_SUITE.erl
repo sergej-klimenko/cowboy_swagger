@@ -86,12 +86,12 @@ handler_test(_Config) ->
     <<"paths">> := ExpectedPaths} = cowboy_swagger:dec_json(Body0),
 
   %% GET index.html
-  ct:comment("GET /api-docs should return 301 MOVED PERMANENTLY to " ++
-             "/api-docs/index.html"),
-  #{status_code := 301, headers := Headers} =
+  ct:comment("GET /api-docs should return 200 OK"),
+  #{status_code := 200, body := IndexBody} =
     cowboy_swagger_test_utils:api_call(get, "/api-docs"),
-  Location = {<<"location">>, <<"/api-docs/index.html">>},
-  Location = lists:keyfind(<<"location">>, 1, Headers),
+  {ok, IndexBodySrc} =
+    file:read_file("../../../../priv/swagger/index.html"),
+  IndexBody = IndexBodySrc,
 
   %% GET swagger-ui.js - test /api-docs/[...] trail
   ct:comment("GET /api-docs/swagger-ui-js should return 200 OK"),
