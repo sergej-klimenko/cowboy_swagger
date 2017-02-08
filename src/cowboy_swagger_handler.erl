@@ -38,8 +38,12 @@ trails(Options) ->
     end,
   Redirect = trails:trail(
     "/api-docs",
-    ?MODULE,
-    [],
+    cowboy_swagger_redirect_handler,
+    {file, StaticFiles ++ "/index.html"},
+    #{get => #{hidden => true}}),
+  Index = trails:trail(
+    "/api-docs/index.html",
+    ?MODULE, [],
     #{get => #{hidden => true}}),
   Static = trails:trail(
     "/api-docs/[...]",
@@ -49,7 +53,7 @@ trails(Options) ->
   MD = #{get => #{hidden => true}},
   Handler = trails:trail(
     "/api-docs/swagger.json", cowboy_swagger_json_handler, Options, MD),
-  [Redirect, Handler, Static].
+  [Redirect, Index, Handler, Static].
 
 %% @private
 -spec cowboy_swagger_priv() -> string().
