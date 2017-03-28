@@ -2,7 +2,7 @@
 -module(cowboy_swagger).
 
 %% API
--export([to_json/1, add_definition/2, schema/1]).
+-export([to_json/1, add_definition/2, add_definition/3, schema/1]).
 
 %% Utilities
 -export([enc_json/1, dec_json/1]).
@@ -81,13 +81,19 @@ to_json(Trails) ->
                     ) ->
   ok.
 add_definition(Name, Properties) ->
-  Definition = build_definition(Name, Properties),
-  CurrentSpec = application:get_env(cowboy_swagger, global_spec, #{}),
-  ExistingDefinitions = maps:get(definitions, CurrentSpec, #{}),
-  NewSpec = CurrentSpec#{definitions => maps:merge( ExistingDefinitions
-                                                  , Definition
-                                                  )},
-  application:set_env(cowboy_swagger, global_spec, NewSpec).
+  add_definition(Name, Properties, []).
+
+add_definition(Name, Properties, Required) ->
+	Definition = build_definition(Name, Properties, Required),
+	add_definition(Definition).
+
+add_definition(Definition) ->
+	CurrentSpec = application:get_env(cowboy_swagger, global_spec, #{}),
+	ExistingDefinitions = maps:get(definitions, CurrentSpec, #{}),
+	NewSpec = CurrentSpec#{definitions => maps:merge( ExistingDefinitions
+		, Definition
+	)},
+	application:set_env(cowboy_swagger, global_spec, NewSpec).
 
 -spec schema(DefinitionName::parameter_definition_name()) ->
   map().
@@ -214,9 +220,16 @@ validate_swagger_map_responses(Responses) ->
 %% @private
 -spec build_definition( Name::parameter_definition_name()
                       , Properties::property_obj()
+					  , Required :: list()
                       ) ->
   parameters_definitions().
-build_definition(Name, Properties) ->
-  #{Name => #{ type => <<"object">>
-             , properties => Properties
-             }}.
+build_definition(Name, Properties, Required) ->
+	#{Name =>
+		#{
+			type => <<"object">>,
+			properties => Properties,
+			required => Required
+		}
+	}.
+
+
