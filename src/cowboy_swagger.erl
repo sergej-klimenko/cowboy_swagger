@@ -72,7 +72,8 @@ to_json(Trails) ->
     application:get_env(cowboy_swagger, global_spec, Default)),
   SanitizeTrails = filter_cowboy_swagger_handler(Trails),
   ApiRoot = list_to_binary(trails:api_root()),
-  SwaggerSpec = GlobalSpec#{paths => swagger_paths(SanitizeTrails),
+  Paths = swagger_paths(SanitizeTrails),
+  SwaggerSpec = GlobalSpec#{paths => lists:keysort(1, maps:to_list(Paths)),
                             basePath => ApiRoot},
   enc_json(SwaggerSpec).
 
